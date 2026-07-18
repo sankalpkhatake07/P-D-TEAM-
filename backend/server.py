@@ -22,6 +22,7 @@ import segmentation_models_pytorch as smp
 from torchvision import transforms
 from disease_translations import DISEASE_INFO_MR, DISEASE_INFO_HI
 from disease_practices import DISEASE_PRACTICES
+from disease_practices_mr import DISEASE_PRACTICES_MR
 
 logging.basicConfig(
     level=logging.INFO,
@@ -609,7 +610,17 @@ async def get_history(lang: str = "en", current_user: dict = Depends(get_current
             det["causes"] = translated["causes"]
             det["prevention"] = translated["prevention"]
             det["treatment"] = translated["treatment"]
-            det["syngenta_products"] = translated["syngenta_products"]
+            # Add practices for approved items
+            disease_name = det["disease"]
+            if lang == "mr" and disease_name in DISEASE_PRACTICES_MR:
+                practices = DISEASE_PRACTICES_MR[disease_name]
+            else:
+                practices = DISEASE_PRACTICES.get(disease_name, {})
+            det["cultural_practices"] = practices.get("cultural", [])
+            det["mechanical_practices"] = practices.get("mechanical", [])
+            det["biological_practices"] = practices.get("biological", [])
+            det["chemical_practices"] = practices.get("chemical", [])
+            det["spray_timing"] = practices.get("timing", [])
     
     return detections
 
@@ -638,8 +649,11 @@ async def get_diseases(lang: str = "en"):
                 "treatment": "",
                 "syngenta_products": []
             }
-        # Add practices data
-        practices = DISEASE_PRACTICES.get(name, {})
+        # Add practices data - use translated if available
+        if lang == "mr" and name in DISEASE_PRACTICES_MR:
+            practices = DISEASE_PRACTICES_MR[name]
+        else:
+            practices = DISEASE_PRACTICES.get(name, {})
         translated["cultural_practices"] = practices.get("cultural", [])
         translated["mechanical_practices"] = practices.get("mechanical", [])
         translated["biological_practices"] = practices.get("biological", [])

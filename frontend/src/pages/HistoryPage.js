@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useTranslation } from 'react-i18next';
-import { History, Search, Clock, CheckCircle2, XCircle, MessageSquare, ChevronDown, Leaf, ShieldCheck, Pill, Bug, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { History, Search, Clock, CheckCircle2, XCircle, MessageSquare, ChevronDown, Leaf, ShieldCheck, Pill, Bug, ShieldAlert, AlertTriangle, Sprout, Wrench, FlaskConical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -160,6 +160,33 @@ export const HistoryPage = () => {
                             <div className="bg-[#FDFDFB] border-l-4 border-[#1A3626] rounded-r-xl p-4">
                               <div className="flex items-center gap-2 mb-1.5"><MessageSquare className="w-4 h-4 text-[#1A3626]" /><h4 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88]">{t('adminSuggestion')}</h4></div>
                               <p className="text-sm text-[#57695D] leading-relaxed">{item.admin_suggestion}</p>
+                            </div>
+                          )}
+                          {/* Management Practices */}
+                          {(item.cultural_practices?.length > 0 || item.mechanical_practices?.length > 0 || item.biological_practices?.length > 0 || item.chemical_practices?.length > 0) && (
+                            <div className="bg-[#FDFDFB] rounded-xl p-4 space-y-3">
+                              <h4 className="text-sm font-bold text-[#1A3626]">
+                                {i18n.language === 'mr' ? 'व्यवस्थापन पद्धती' : i18n.language === 'hi' ? 'प्रबंधन प्रथाएं' : 'Management Practices'}
+                              </h4>
+                              {[
+                                { items: item.cultural_practices, icon: Sprout, label: i18n.language === 'mr' ? 'सांस्कृतिक' : 'Cultural', color: 'text-[#1A3626]' },
+                                { items: item.mechanical_practices, icon: Wrench, label: i18n.language === 'mr' ? 'यांत्रिक' : 'Mechanical', color: 'text-[#57695D]' },
+                                { items: item.biological_practices, icon: Bug, label: i18n.language === 'mr' ? 'जैविक' : 'Biological', color: 'text-[#839E88]' },
+                                { items: item.chemical_practices, icon: FlaskConical, label: i18n.language === 'mr' ? 'रासायनिक' : 'Chemical', color: 'text-[#C25E4B]' },
+                                { items: item.spray_timing, icon: Clock, label: i18n.language === 'mr' ? 'फवारणी वेळ' : 'Spray Timing', color: 'text-[#B36B00]' },
+                              ].filter(s => s.items?.length > 0).map((section, si) => (
+                                <div key={si}>
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <section.icon className={`w-3.5 h-3.5 ${section.color}`} />
+                                    <span className="text-xs font-bold text-[#839E88] uppercase tracking-wider">{section.label}</span>
+                                  </div>
+                                  <ul className="space-y-1 pl-5">
+                                    {section.items.map((p, pi) => (
+                                      <li key={pi} className="text-xs text-[#57695D] leading-relaxed list-disc">{p}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
