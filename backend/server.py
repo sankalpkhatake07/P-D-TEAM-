@@ -21,6 +21,7 @@ import numpy as np
 import segmentation_models_pytorch as smp
 from torchvision import transforms
 from disease_translations import DISEASE_INFO_MR, DISEASE_INFO_HI
+from disease_practices import DISEASE_PRACTICES
 
 logging.basicConfig(
     level=logging.INFO,
@@ -623,8 +624,27 @@ async def get_file(path: str):
 @api_router.get("/diseases")
 async def get_diseases(lang: str = "en"):
     result = {}
-    for name, info in DISEASE_INFO.items():
-        translated = get_translated_disease_info(name, lang)
+    # Include ALL diseases from practices document
+    for name in DISEASE_PRACTICES.keys():
+        # Get base info if available, otherwise create minimal entry
+        if name in DISEASE_INFO:
+            translated = get_translated_disease_info(name, lang)
+        else:
+            translated = {
+                "disease_name_local": name,
+                "symptoms": "",
+                "causes": "",
+                "prevention": "",
+                "treatment": "",
+                "syngenta_products": []
+            }
+        # Add practices data
+        practices = DISEASE_PRACTICES.get(name, {})
+        translated["cultural_practices"] = practices.get("cultural", [])
+        translated["mechanical_practices"] = practices.get("mechanical", [])
+        translated["biological_practices"] = practices.get("biological", [])
+        translated["chemical_practices"] = practices.get("chemical", [])
+        translated["spray_timing"] = practices.get("timing", [])
         result[name] = translated
     return result
 

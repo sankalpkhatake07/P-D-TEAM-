@@ -9,7 +9,11 @@ import { format } from 'date-fns';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const DISEASE_LIST = [
-  "Brown Rust", "Mosaic", "Red Rot", "Healthy", "Unrecognized"
+  "Brown Rust", "Mosaic", "Red Rot", "Healthy", "Unrecognized",
+  "Brown Spot", "Early Shoot Borer", "Eye Spot", "Grassy Shoot Disease",
+  "Internode Borer", "Leaf Footed Bug", "Mites", "Pokkah Boeng", "Pyrilla",
+  "Scale Insect", "Whiplash Smut", "Wilt", "Woolly Aphids", "Top Shoot Borer",
+  "White Grub", "Mealy Bug", "Grasshopper", "Yellow Leaf Disease", "Orange Rust", "Leafscald"
 ];
 
 export const AdminPage = () => {
@@ -144,7 +148,6 @@ export const AdminPage = () => {
                         {item.overlay_path && (
                           <div className="w-36 h-36 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3] relative">
                             <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Segmentation" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-1 left-1 bg-[#1A3626]/80 text-white text-[10px] px-1.5 py-0.5 rounded-md font-medium">AI Overlay</span>
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
@@ -252,7 +255,6 @@ export const AdminPage = () => {
                         {item.overlay_path && (
                           <div className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3] relative">
                             <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Segmentation" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-1 left-1 bg-[#1A3626]/80 text-white text-[10px] px-1.5 py-0.5 rounded-md font-medium">AI Overlay</span>
                           </div>
                         )}
                         <div className="flex-1 min-w-0">

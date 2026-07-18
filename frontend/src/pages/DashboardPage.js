@@ -122,7 +122,6 @@ export const DashboardPage = () => {
                   {result.overlay_path && (
                     <div className="rounded-xl overflow-hidden bg-[#E8E8E3] relative">
                       <img src={`${API_URL}/api/files/${result.overlay_path}`} alt="Disease Segmentation" className="w-full h-auto" />
-                      <span className="absolute top-2 left-2 bg-[#1A3626]/80 text-white text-xs px-2 py-1 rounded-lg font-medium">AI Segmentation Overlay</span>
                     </div>
                   )}
                   {result.disease === 'Unrecognized' ? (

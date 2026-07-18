@@ -1,27 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Info, Warning, Sparkle } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
+import { Search, Sprout, Wrench, Bug, FlaskConical, Clock, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const PracticeSection = ({ icon: Icon, title, items, color }) => {
+  const [open, setOpen] = useState(false);
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="border border-[#1A3626]/10 rounded-xl overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-4 hover:bg-[#F5F5F0] transition-colors">
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
+            <Icon className="w-4.5 h-4.5 text-white" />
+          </div>
+          <span className="font-semibold text-[#1A3626] text-sm">{title}</span>
+          <span className="text-xs text-[#839E88] bg-[#E8E8E3] px-2 py-0.5 rounded-full">{items.length}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-[#839E88] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-start gap-2.5 text-sm text-[#57695D]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#839E88] mt-1.5 flex-shrink-0" />
+              <span className="leading-relaxed">{item}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const DiseasesPage = () => {
   const [diseases, setDiseases] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedDisease, setSelectedDisease] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
     fetchDiseases();
-  }, [i18n.language]);
+  }, [i18n.language]); // eslint-disable-line
 
   const fetchDiseases = async () => {
     try {
       const { data } = await axios.get(`${API_URL}/api/diseases?lang=${i18n.language}`);
       setDiseases(data);
-      if (Object.keys(data).length > 0) {
+      if (Object.keys(data).length > 0 && !selectedDisease) {
         setSelectedDisease(Object.keys(data)[0]);
       }
     } catch (error) {
@@ -31,121 +61,136 @@ export const DiseasesPage = () => {
     }
   };
 
-  const diseaseIcons = {
-    'Red Rot': <Warning size={32} weight="fill" className="text-[#D9534F]" />,
-    'Smut': <Warning size={32} weight="fill" className="text-[#F5A623]" />,
-    'Rust': <Info size={32} weight="fill" className="text-[#F5A623]" />,
-    'Healthy': <Sparkle size={32} weight="fill" className="text-[#5CB85C]" />
-  };
+  const diseaseNames = Object.keys(diseases).filter(name =>
+    name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selected = selectedDisease && diseases[selectedDisease];
 
   return (
     <Layout>
-      <div data-testid="diseases-page" className="max-w-6xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl sm:text-5xl font-bold text-[#1A201C] mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            {t('diseases')}
-          </h1>
-          <p className="text-base text-[#5C6B61] mb-8">
-            Learn about common sugarcane diseases and their management
-          </p>
+      <motion.div data-testid="diseases-page" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-[#1A3626] tracking-tight mb-1">{t('diseases')}</h1>
+        <p className="text-base text-[#57695D] mb-8">Complete management practices for sugarcane diseases and pests</p>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-[#2D5A27] mx-auto"></div>
-              <p className="mt-4 text-[#5C6B61]">{t('loading')}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Disease List */}
-              <div className="space-y-3">
-                {Object.keys(diseases).map((diseaseName) => (
-                  <motion.button
-                    key={diseaseName}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedDisease(diseaseName)}
-                    data-testid={`disease-card-${diseaseName.toLowerCase().replace(' ', '-')}`}
-                    className={`w-full text-left p-4 rounded-xl transition-all ${
-                      selectedDisease === diseaseName
-                        ? 'bg-[#2D5A27] text-white shadow-lg'
-                        : 'bg-white hover:shadow-md'
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-3 border-[#1A3626] mx-auto"></div>
+            <p className="mt-4 text-[#839E88]">{t('loading')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Disease List Sidebar */}
+            <div className="lg:col-span-4 space-y-3">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#839E88]" />
+                <input
+                  type="text"
+                  placeholder="Search diseases..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#FDFDFB] border border-[#839E88]/40 rounded-xl text-sm focus:ring-2 focus:ring-[#1A3626] focus:border-transparent outline-none text-[#1A3626] placeholder:text-[#839E88]"
+                />
+              </div>
+              <div className="max-h-[65vh] overflow-y-auto space-y-1.5 pr-1">
+                {diseaseNames.map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedDisease(name)}
+                    data-testid={`disease-card-${name.toLowerCase().replace(/\s+/g, '-')}`}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      selectedDisease === name
+                        ? 'bg-[#1A3626] text-[#FDFDFB] shadow-md shadow-[#1A3626]/20'
+                        : 'bg-[#FDFDFB] text-[#1A3626] hover:bg-[#E8E8E3] border border-[#1A3626]/10'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={selectedDisease === diseaseName ? 'text-white' : ''}>
-                        {diseaseIcons[diseaseName]}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">{diseases[diseaseName]?.disease_name_local || diseaseName}</h3>
-                        {diseases[diseaseName]?.disease_name_local && diseases[diseaseName]?.disease_name_local !== diseaseName && (
-                          <p className={`text-xs ${selectedDisease === diseaseName ? 'text-white/70' : 'text-[#5C6B61]'}`}>{diseaseName}</p>
-                        )}
-                      </div>
-                    </div>
-                  </motion.button>
+                    <span>{diseases[name]?.disease_name_local || name}</span>
+                    {diseases[name]?.disease_name_local && diseases[name]?.disease_name_local !== name && (
+                      <span className={`block text-xs mt-0.5 ${selectedDisease === name ? 'text-white/60' : 'text-[#839E88]'}`}>{name}</span>
+                    )}
+                  </button>
                 ))}
               </div>
+            </div>
 
-              {/* Disease Details */}
-              <div className="md:col-span-2">
-                {selectedDisease && diseases[selectedDisease] && (
-                  <motion.div
-                    key={selectedDisease}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-white rounded-2xl shadow-lg p-8 space-y-6"
-                  >
-                    <div className="flex items-center space-x-4">
-                      {diseaseIcons[selectedDisease]}
-                      <h2 className="text-3xl font-bold text-[#1A201C]" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                        {diseases[selectedDisease]?.disease_name_local || selectedDisease}
-                      </h2>
-                      {diseases[selectedDisease]?.disease_name_local && diseases[selectedDisease]?.disease_name_local !== selectedDisease && (
-                        <p className="text-base text-[#5C6B61]">({selectedDisease})</p>
+            {/* Disease Details */}
+            <div className="lg:col-span-8">
+              {selected ? (
+                <motion.div key={selectedDisease} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                  className="bg-[#FDFDFB] border border-[#1A3626]/10 rounded-2xl p-6 sm:p-8 space-y-6"
+                >
+                  <div>
+                    <h2 className="text-2xl font-extrabold text-[#1A3626] tracking-tight">
+                      {selected.disease_name_local || selectedDisease}
+                    </h2>
+                    {selected.disease_name_local && selected.disease_name_local !== selectedDisease && (
+                      <p className="text-sm text-[#839E88] mt-0.5">{selectedDisease}</p>
+                    )}
+                  </div>
+
+                  {/* Basic Info */}
+                  {selected.symptoms && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selected.symptoms && (
+                        <div className="border-l-4 border-[#C25E4B] pl-4">
+                          <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88] mb-1">{t('symptoms')}</h3>
+                          <p className="text-sm text-[#57695D] leading-relaxed">{selected.symptoms}</p>
+                        </div>
                       )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="border-l-4 border-[#2D5A27] pl-4">
-                        <h3 className="font-semibold text-[#1A201C] mb-2">{t('symptoms')}</h3>
-                        <p className="text-[#5C6B61] leading-relaxed">{diseases[selectedDisease].symptoms}</p>
-                      </div>
-
-                      <div className="border-l-4 border-[#F5A623] pl-4">
-                        <h3 className="font-semibold text-[#1A201C] mb-2">{t('causes')}</h3>
-                        <p className="text-[#5C6B61] leading-relaxed">{diseases[selectedDisease].causes}</p>
-                      </div>
-
-                      <div className="border-l-4 border-[#5CB85C] pl-4">
-                        <h3 className="font-semibold text-[#1A201C] mb-2">{t('prevention')}</h3>
-                        <p className="text-[#5C6B61] leading-relaxed">{diseases[selectedDisease].prevention}</p>
-                      </div>
-
-                      <div className="border-l-4 border-[#D9534F] pl-4">
-                        <h3 className="font-semibold text-[#1A201C] mb-2">{t('treatment')}</h3>
-                        <p className="text-[#5C6B61] leading-relaxed">{diseases[selectedDisease].treatment}</p>
-                      </div>
-
-                      {diseases[selectedDisease].syngenta_products.length > 0 && (
-                        <div className="bg-[#E8ECE5] rounded-xl p-6">
-                          <h3 className="font-semibold text-[#2D5A27] mb-4 text-lg">{t('recommendedProducts')}</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {diseases[selectedDisease].syngenta_products.map((product, idx) => (
-                              <div key={idx} className="bg-white rounded-lg p-3 font-medium text-[#1A201C]">
-                                {product}
-                              </div>
-                            ))}
-                          </div>
+                      {selected.causes && (
+                        <div className="border-l-4 border-[#B36B00] pl-4">
+                          <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88] mb-1">{t('causes')}</h3>
+                          <p className="text-sm text-[#57695D] leading-relaxed">{selected.causes}</p>
+                        </div>
+                      )}
+                      {selected.treatment && (
+                        <div className="border-l-4 border-[#1A3626] pl-4">
+                          <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88] mb-1">{t('treatment')}</h3>
+                          <p className="text-sm text-[#57695D] leading-relaxed">{selected.treatment}</p>
+                        </div>
+                      )}
+                      {selected.prevention && (
+                        <div className="border-l-4 border-[#839E88] pl-4">
+                          <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88] mb-1">{t('prevention')}</h3>
+                          <p className="text-sm text-[#57695D] leading-relaxed">{selected.prevention}</p>
                         </div>
                       )}
                     </div>
-                  </motion.div>
-                )}
-              </div>
+                  )}
+
+                  {/* Practices */}
+                  <div>
+                    <h3 className="text-lg font-bold text-[#1A3626] mb-3">Management Practices</h3>
+                    <div className="space-y-2">
+                      <PracticeSection icon={Sprout} title="Cultural Practices" items={selected.cultural_practices} color="bg-[#1A3626]" />
+                      <PracticeSection icon={Wrench} title="Mechanical Practices" items={selected.mechanical_practices} color="bg-[#57695D]" />
+                      <PracticeSection icon={Bug} title="Biological Practices" items={selected.biological_practices} color="bg-[#839E88]" />
+                      <PracticeSection icon={FlaskConical} title="Chemical Practices" items={selected.chemical_practices} color="bg-[#C25E4B]" />
+                      <PracticeSection icon={Clock} title="When & How to Spray" items={selected.spray_timing} color="bg-[#B36B00]" />
+                    </div>
+                  </div>
+
+                  {/* Products */}
+                  {selected.syngenta_products && selected.syngenta_products.length > 0 && (
+                    <div className="bg-[#D7E8D6] border border-[#A3C4A5] rounded-xl p-5">
+                      <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#1A3626] mb-3">{t('recommendedProducts')}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selected.syngenta_products.map((p, i) => (
+                          <span key={i} className="bg-[#FDFDFB] px-3 py-1.5 rounded-full text-sm font-medium text-[#1A3626] border border-[#1A3626]/20">{p}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ) : (
+                <div className="bg-[#FDFDFB] border border-[#1A3626]/10 rounded-2xl p-16 text-center">
+                  <p className="text-[#839E88]">Select a disease to view details</p>
+                </div>
+              )}
             </div>
-          )}
-        </motion.div>
-      </div>
+          </div>
+        )}
+      </motion.div>
     </Layout>
   );
 };

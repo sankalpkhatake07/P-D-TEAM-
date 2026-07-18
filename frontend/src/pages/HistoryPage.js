@@ -88,7 +88,6 @@ export const HistoryPage = () => {
                         {item.overlay_path && (
                           <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#E8E8E3] relative">
                             <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Overlay" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-0.5 left-0.5 bg-[#1A3626]/80 text-white text-[9px] px-1 py-0.5 rounded font-medium">Overlay</span>
                           </div>
                         )}
                       </div>
