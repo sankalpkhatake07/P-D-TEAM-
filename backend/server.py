@@ -618,8 +618,10 @@ async def get_stats(current_user: dict = Depends(get_current_user)):
     total_users = await db.users.count_documents({"role": "user"})
     total_scans = await db.detections.count_documents({})
     
-    # Disease distribution
+    # Disease distribution - only count diseases in current system
+    valid_diseases = list(DISEASE_INFO.keys())
     pipeline = [
+        {"$match": {"disease": {"$in": valid_diseases}}},
         {"$group": {"_id": "$disease", "count": {"$sum": 1}}}
     ]
     disease_stats = await db.detections.aggregate(pipeline).to_list(100)
