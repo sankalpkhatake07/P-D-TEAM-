@@ -18,8 +18,10 @@ from PIL import Image
 import io
 import zipfile
 import torch
+import numpy as np
+import segmentation_models_pytorch as smp
+from torchvision import transforms
 from disease_translations import DISEASE_INFO_MR, DISEASE_INFO_HI
-from ultralytics import YOLO
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 logging.basicConfig(
@@ -46,16 +48,36 @@ storage_key = None
 JWT_SECRET = os.environ.get("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 
-# Load YOLO model
-model_path = ROOT_DIR / "models" / "best.pt"  # Using user-provided best.pt (15 classes)
-yolo_model = None
+# Load UNet model (segmentation: 4 classes)
+UNET_CLASSES = {0: "Background", 1: "Brown Rust", 2: "Mosaic", 3: "Red Rot"}
+UNET_COLORS = {
+    1: (255, 140, 0, 140),    # Brown Rust - orange
+    2: (180, 220, 40, 140),   # Mosaic - yellow-green
+    3: (220, 40, 40, 140),    # Red Rot - red
+}
+unet_model = None
+unet_transform = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 try:
-    yolo_model = YOLO(str(model_path))
-    logging.info("YOLO model (best.pt) loaded successfully")
+    unet_model = smp.Unet(
+        encoder_name="resnet34",
+        encoder_weights=None,
+        in_channels=3,
+        classes=4,
+        activation=None
+    )
+    unet_weights_path = ROOT_DIR / "models" / "best_unet.pth"
+    state = torch.load(str(unet_weights_path), map_location="cpu", weights_only=False)
+    unet_model.load_state_dict(state)
+    unet_model.eval()
+    logging.info("UNet model (best_unet.pth) loaded successfully - 4 classes")
 except Exception as e:
-    logging.error(f"Failed to load YOLO model: {e}")
-    logging.info("Will rely on Gemini Vision API only")
+    logging.error(f"Failed to load UNet model: {e}")
+    logging.info("Will rely on GPT Vision API only")
 
 
 # Disease Information Database with correct active molecules/fertilizers
@@ -356,62 +378,79 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Disease detection functions
-async def detect_disease_yolo(image_bytes: bytes) -> Dict[str, Any]:
-    """Primary: Use trained YOLO model for detection"""
-    if not yolo_model:
-        return {"disease": None, "confidence": 0, "severity": "unknown", "boxes": []}
+async def detect_disease_unet(image_bytes: bytes) -> Dict[str, Any]:
+    """Primary: Use trained UNet model for segmentation and classification"""
+    if not unet_model:
+        return {"disease": None, "severity": "unknown", "mask_data": None}
     
     try:
-        image = Image.open(io.BytesIO(image_bytes))
-        results = yolo_model(image, conf=0.15)  # Lower threshold to catch more detections
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        orig_w, orig_h = image.size
         
-        if results and len(results) > 0:
-            result = results[0]
-            if len(result.boxes) > 0:
-                # Pick the detection with highest confidence
-                best_idx = 0
-                best_conf = 0
-                for i in range(len(result.boxes)):
-                    conf = float(result.boxes[i].conf[0])
-                    if conf > best_conf:
-                        best_conf = conf
-                        best_idx = i
-                
-                box = result.boxes[best_idx]
-                class_id = int(box.cls[0])
-                confidence = float(box.conf[0])
-                
-                # Use model's own class names (normalized to title case)
-                raw_name = yolo_model.names.get(class_id, None)
-                disease = raw_name.title() if raw_name else None
-                
-                # Collect all bounding box info
-                boxes = []
-                for i in range(len(result.boxes)):
-                    b = result.boxes[i]
-                    boxes.append({
-                        "x1": float(b.xyxy[0][0]),
-                        "y1": float(b.xyxy[0][1]),
-                        "x2": float(b.xyxy[0][2]),
-                        "y2": float(b.xyxy[0][3]),
-                        "class": yolo_model.names.get(int(b.cls[0]), "").title(),
-                        "conf": round(float(b.conf[0]) * 100, 1)
-                    })
-                
-                if confidence > 0.6:
-                    severity = "high"
-                elif confidence > 0.3:
-                    severity = "medium"
-                else:
-                    severity = "low"
-                
-                logging.info(f"YOLO detected {len(result.boxes)} objects, best: {disease} ({round(confidence*100,1)}%)")
-                return {"disease": disease, "confidence": round(confidence * 100, 2), "severity": severity, "boxes": boxes}
+        # Preprocess
+        input_tensor = unet_transform(image).unsqueeze(0)  # [1, 3, 256, 256]
         
-        return {"disease": None, "confidence": 0, "severity": "unknown", "boxes": []}
+        with torch.no_grad():
+            output = unet_model(input_tensor)  # [1, 4, 256, 256]
+        
+        # Get class predictions per pixel
+        pred_mask = torch.argmax(output.squeeze(0), dim=0).numpy()  # [256, 256]
+        
+        total_pixels = pred_mask.size
+        class_counts = {}
+        for cls_id in range(1, 4):  # Skip background (0)
+            count = int(np.sum(pred_mask == cls_id))
+            if count > 0:
+                class_counts[cls_id] = count
+        
+        if not class_counts:
+            return {"disease": None, "severity": "low", "mask_data": None}
+        
+        # Dominant disease class (most pixels)
+        dominant_cls = max(class_counts, key=class_counts.get)
+        disease_name = UNET_CLASSES[dominant_cls]
+        affected_ratio = class_counts[dominant_cls] / total_pixels
+        
+        # Severity based on affected area percentage
+        if affected_ratio > 0.25:
+            severity = "high"
+        elif affected_ratio > 0.08:
+            severity = "medium"
+        else:
+            severity = "low"
+        
+        # Generate overlay image
+        overlay_image = image.resize((256, 256), Image.LANCZOS)
+        overlay_rgba = overlay_image.convert("RGBA")
+        mask_layer = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+        mask_pixels = mask_layer.load()
+        
+        for y in range(256):
+            for x in range(256):
+                cls = int(pred_mask[y, x])
+                if cls in UNET_COLORS:
+                    mask_pixels[x, y] = UNET_COLORS[cls]
+        
+        # Composite: original + colored mask
+        composite = Image.alpha_composite(overlay_rgba, mask_layer)
+        # Resize back to original dimensions
+        composite = composite.resize((orig_w, orig_h), Image.LANCZOS)
+        
+        # Convert to bytes
+        buf = io.BytesIO()
+        composite.convert("RGB").save(buf, format="JPEG", quality=85)
+        overlay_bytes = buf.getvalue()
+        
+        logging.info(f"UNet: {disease_name}, affected={round(affected_ratio*100,1)}%, severity={severity}")
+        return {
+            "disease": disease_name,
+            "severity": severity,
+            "affected_percent": round(affected_ratio * 100, 1),
+            "overlay_bytes": overlay_bytes,
+        }
     except Exception as e:
-        logging.error(f"YOLO error: {e}")
-        return {"disease": None, "confidence": 0, "severity": "unknown", "boxes": []}
+        logging.error(f"UNet error: {e}")
+        return {"disease": None, "severity": "unknown", "mask_data": None}
 
 # Note: Using Gemini Vision API exclusively for cloud deployment compatibility
 
@@ -742,57 +781,62 @@ async def detect_disease(file: UploadFile = File(...), current_user: dict = Depe
         storage_result = put_object(storage_path, image_bytes, file.content_type or "image/jpeg")
         
         # ALWAYS RUN BOTH MODELS
-        logging.info("Running dual detection: YOLO (primary) + GPT-5.1 Vision (verifier)...")
+        logging.info("Running dual detection: UNet (primary) + GPT-5.1 Vision (verifier)...")
         
-        # Run YOLO model (primary - trained specifically on sugarcane diseases)
-        yolo_result = await detect_disease_yolo(image_bytes)
-        logging.info(f"YOLO: {yolo_result['disease']} ({yolo_result['confidence']}%)")
+        # Run UNet model (primary - trained for segmentation of 3 sugarcane diseases)
+        unet_result = await detect_disease_unet(image_bytes)
+        logging.info(f"UNet: {unet_result.get('disease')} (affected: {unet_result.get('affected_percent', 0)}%)")
         
         # Run GPT-5.1 Vision (verifier/fallback)
         gpt_result = await detect_disease_ai(image_bytes)
         logging.info(f"GPT-5.1: {gpt_result['disease']} ({gpt_result['confidence']}%)")
         
+        # Store overlay image if UNet produced one
+        overlay_path = ""
+        overlay_bytes = unet_result.get("overlay_bytes")
+        if overlay_bytes:
+            overlay_storage_path = f"{APP_NAME}/overlays/{current_user['id']}/{image_id}_overlay.jpg"
+            try:
+                put_object(overlay_storage_path, overlay_bytes, "image/jpeg")
+                overlay_path = overlay_storage_path
+            except Exception as e:
+                logging.warning(f"Failed to store overlay: {e}")
+        
         # COMPARISON LOGIC
-        # Priority: YOLO (domain-trained) is primary, GPT-5.1 is verifier
-        if yolo_result["disease"] and gpt_result["disease"]:
-            yolo_norm = yolo_result["disease"].lower().strip()
-            gpt_norm = gpt_result["disease"].lower().strip()
+        # UNet handles: Brown Rust, Mosaic, Red Rot (3 diseases)
+        # GPT-5.1 handles: All 26 diseases (broader coverage)
+        unet_disease = unet_result.get("disease")
+        gpt_disease = gpt_result.get("disease")
+        
+        if unet_disease and gpt_disease:
+            unet_norm = unet_disease.lower().strip()
+            gpt_norm = gpt_disease.lower().strip()
             
-            if yolo_norm == gpt_norm:
-                # Both agree — highest confidence
-                final_disease = yolo_result["disease"]
-                final_severity = gpt_result["severity"] if gpt_result["severity"] != "unknown" else yolo_result["severity"]
+            if unet_norm == gpt_norm:
+                # Both agree
+                final_disease = unet_disease
+                final_severity = unet_result["severity"]
                 logging.info("BOTH AGREE — using shared prediction")
-            elif yolo_result["confidence"] >= 40:
-                # YOLO has decent confidence — trust the trained model
-                final_disease = yolo_result["disease"]
-                final_severity = yolo_result["severity"]
-                logging.info(f"Using YOLO (trained model, {yolo_result['confidence']}% confidence)")
-            elif gpt_result["confidence"] >= 75:
-                # GPT is fairly confident and YOLO is weak — trust GPT
-                final_disease = gpt_result["disease"]
-                final_severity = gpt_result["severity"]
-                logging.info(f"Using GPT-5.1 (YOLO weak, GPT confident at {gpt_result['confidence']}%)")
+            elif unet_disease:
+                # UNet detected one of its 3 diseases — trust the segmentation model
+                final_disease = unet_disease
+                final_severity = unet_result["severity"]
+                logging.info(f"Using UNet (segmentation model, {unet_result.get('affected_percent', 0)}% affected)")
             else:
-                # Both uncertain — pick the one with higher confidence
-                if gpt_result["confidence"] > yolo_result["confidence"]:
-                    final_disease = gpt_result["disease"]
-                    final_severity = gpt_result["severity"]
-                    logging.info(f"Both uncertain — GPT higher confidence ({gpt_result['confidence']}% vs {yolo_result['confidence']}%)")
-                else:
-                    final_disease = yolo_result["disease"]
-                    final_severity = yolo_result["severity"]
-                    logging.info(f"Both uncertain — YOLO higher confidence ({yolo_result['confidence']}% vs {gpt_result['confidence']}%)")
-        elif yolo_result["disease"]:
-            # Only YOLO detected
-            final_disease = yolo_result["disease"]
-            final_severity = yolo_result["severity"]
-            logging.info("Using YOLO only (GPT returned nothing)")
-        elif gpt_result["disease"]:
-            # Only GPT detected (YOLO found no objects)
-            final_disease = gpt_result["disease"]
-            final_severity = gpt_result["severity"]
-            logging.info("Using GPT-5.1 only (YOLO found no detections)")
+                # UNet found nothing, use GPT
+                final_disease = gpt_disease
+                final_severity = gpt_result.get("severity", "medium")
+                logging.info(f"Using GPT-5.1 (UNet found no disease)")
+        elif unet_disease:
+            # Only UNet detected
+            final_disease = unet_disease
+            final_severity = unet_result["severity"]
+            logging.info("Using UNet only (GPT returned nothing)")
+        elif gpt_disease:
+            # Only GPT detected (UNet found background only — could be disease outside UNet's 3 classes)
+            final_disease = gpt_disease
+            final_severity = gpt_result.get("severity", "medium")
+            logging.info("Using GPT-5.1 only (UNet found no disease regions)")
         else:
             # Neither detected anything
             final_disease = "Healthy"
@@ -827,6 +871,7 @@ async def detect_disease(file: UploadFile = File(...), current_user: dict = Depe
             "user_id": current_user["id"],
             "username": current_user["username"],
             "image_path": storage_result["path"],
+            "overlay_path": overlay_path,
             "ai_disease": final_disease,
             "ai_severity": final_severity,
             "disease": final_disease,

@@ -145,3 +145,4 @@ credentials.json
 *.pem
 *.key
 .credentials
+backend/models/best_unet.pth

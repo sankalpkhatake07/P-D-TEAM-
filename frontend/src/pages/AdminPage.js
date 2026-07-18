@@ -146,6 +146,12 @@ export const AdminPage = () => {
                         <div className="w-36 h-36 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3]">
                           <img src={`${API_URL}/api/files/${item.image_path}`} alt="" className="w-full h-full object-cover" />
                         </div>
+                        {item.overlay_path && (
+                          <div className="w-36 h-36 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3] relative">
+                            <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Segmentation" className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 left-1 bg-[#1A3626]/80 text-white text-[10px] px-1.5 py-0.5 rounded-md font-medium">AI Overlay</span>
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-3">
                             <div>
@@ -248,6 +254,12 @@ export const AdminPage = () => {
                         <div className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3]">
                           <img src={`${API_URL}/api/files/${item.image_path}`} alt="" className="w-full h-full object-cover" />
                         </div>
+                        {item.overlay_path && (
+                          <div className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3] relative">
+                            <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Segmentation" className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 left-1 bg-[#1A3626]/80 text-white text-[10px] px-1.5 py-0.5 rounded-md font-medium">AI Overlay</span>
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
                             <div>

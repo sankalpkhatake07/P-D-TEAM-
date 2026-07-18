@@ -81,8 +81,16 @@ export const HistoryPage = () => {
                 >
                   <div className="p-5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : item.id)}>
                     <div className="flex items-center gap-5">
-                      <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8E8E3]">
-                        <img src={`${API_URL}/api/files/${item.image_path}`} alt="" className="w-full h-full object-cover" />
+                      <div className="flex gap-2 flex-shrink-0">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#E8E8E3]">
+                          <img src={`${API_URL}/api/files/${item.image_path}`} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        {item.overlay_path && (
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#E8E8E3] relative">
+                            <img src={`${API_URL}/api/files/${item.overlay_path}`} alt="AI Overlay" className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0.5 left-0.5 bg-[#1A3626]/80 text-white text-[9px] px-1 py-0.5 rounded font-medium">Overlay</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3">

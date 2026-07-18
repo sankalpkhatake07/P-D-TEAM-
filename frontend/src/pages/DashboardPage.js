@@ -119,6 +119,12 @@ export const DashboardPage = () => {
                   data-testid="detection-result"
                   className="bg-[#FDFDFB] border border-[#1A3626]/10 rounded-2xl shadow-[4px_4px_10px_rgba(26,54,38,0.05),-4px_-4px_10px_rgba(255,255,255,1)] p-7 space-y-5"
                 >
+                  {result.overlay_path && (
+                    <div className="rounded-xl overflow-hidden bg-[#E8E8E3] relative">
+                      <img src={`${API_URL}/api/files/${result.overlay_path}`} alt="Disease Segmentation" className="w-full h-auto" />
+                      <span className="absolute top-2 left-2 bg-[#1A3626]/80 text-white text-xs px-2 py-1 rounded-lg font-medium">AI Segmentation Overlay</span>
+                    </div>
+                  )}
                   <div className="bg-[#FCE5CD] border border-[#F3C185] rounded-xl p-5">
                     <div className="flex items-start space-x-3">
                       <Clock className="w-7 h-7 text-[#B36B00] flex-shrink-0 mt-0.5" />
