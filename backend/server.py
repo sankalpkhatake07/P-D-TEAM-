@@ -229,6 +229,9 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Disease detection functions
+CONFIDENCE_THRESHOLD = 0.75  # Only accept pixel predictions above 75% softmax confidence
+MIN_AFFECTED_RATIO = 0.02   # At least 2% of confident pixels must be disease to count
+
 async def detect_disease_unet(image_bytes: bytes) -> Dict[str, Any]:
     """Primary: Use trained UNet model for segmentation and classification"""
     if not unet_model:
@@ -244,23 +247,42 @@ async def detect_disease_unet(image_bytes: bytes) -> Dict[str, Any]:
         with torch.no_grad():
             output = unet_model(input_tensor)  # [1, 4, 256, 256]
         
-        # Get class predictions per pixel
-        pred_mask = torch.argmax(output.squeeze(0), dim=0).numpy()  # [256, 256]
+        # Apply softmax to get per-pixel confidence
+        probs = torch.softmax(output.squeeze(0), dim=0).numpy()  # [4, 256, 256]
+        pred_mask_raw = np.argmax(probs, axis=0)  # [256, 256]
+        max_probs = np.max(probs, axis=0)  # [256, 256] confidence per pixel
+        
+        # Only keep predictions where model is confident enough
+        # Low-confidence pixels revert to background (0)
+        pred_mask = pred_mask_raw.copy()
+        pred_mask[max_probs < CONFIDENCE_THRESHOLD] = 0
         
         total_pixels = pred_mask.size
         class_counts = {}
+        avg_confidences = {}
         for cls_id in range(1, 4):  # Skip background (0)
-            count = int(np.sum(pred_mask == cls_id))
+            cls_mask = pred_mask == cls_id
+            count = int(np.sum(cls_mask))
             if count > 0:
                 class_counts[cls_id] = count
+                avg_confidences[cls_id] = float(np.mean(probs[cls_id][cls_mask]))
         
         if not class_counts:
+            logging.info("UNet: No disease pixels above confidence threshold")
             return {"disease": None, "severity": "low", "mask_data": None}
         
         # Dominant disease class (most pixels)
         dominant_cls = max(class_counts, key=class_counts.get)
         disease_name = UNET_CLASSES[dominant_cls]
         affected_ratio = class_counts[dominant_cls] / total_pixels
+        avg_conf = avg_confidences.get(dominant_cls, 0)
+        
+        logging.info(f"UNet detail: {disease_name}, pixels={class_counts[dominant_cls]}, affected={round(affected_ratio*100,2)}%, avg_conf={round(avg_conf*100,1)}%")
+        
+        # If affected area is too small, treat as noise / unrecognized
+        if affected_ratio < MIN_AFFECTED_RATIO:
+            logging.info(f"UNet: {disease_name} detected but only {round(affected_ratio*100,1)}% — below minimum threshold, treating as unrecognized")
+            return {"disease": None, "severity": "low", "mask_data": None}
         
         # Severity based on affected area percentage
         if affected_ratio > 0.25:
@@ -270,7 +292,7 @@ async def detect_disease_unet(image_bytes: bytes) -> Dict[str, Any]:
         else:
             severity = "low"
         
-        # Generate overlay image
+        # Generate overlay image (only show confident pixels)
         overlay_image = image.resize((256, 256), Image.LANCZOS)
         overlay_rgba = overlay_image.convert("RGBA")
         mask_layer = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
