@@ -130,27 +130,23 @@ def get_translated_disease_info(disease_name: str, lang: str = "en") -> Dict[str
             disease_name = key
             break
     if not info:
-        info = dict(DISEASE_INFO.get("Healthy", {}))
-        disease_name = "Healthy"
+        # Disease not in DISEASE_INFO — create a minimal base
+        info = {"symptoms": "", "causes": "", "prevention": "", "treatment": "", "syngenta_products": []}
     
     if lang == "mr" and disease_name in DISEASE_INFO_MR:
         mr = DISEASE_INFO_MR[disease_name]
         info["disease_name_local"] = mr.get("disease_name", disease_name)
-        info["symptoms"] = mr["symptoms"]
-        info["causes"] = mr["causes"]
-        info["prevention"] = mr["prevention"]
-        info["treatment"] = mr["treatment"]
-        if mr.get("syngenta_products"):
-            info["syngenta_products"] = mr["syngenta_products"]
+        if mr.get("symptoms"): info["symptoms"] = mr["symptoms"]
+        if mr.get("causes"): info["causes"] = mr["causes"]
+        if mr.get("prevention"): info["prevention"] = mr["prevention"]
+        if mr.get("treatment"): info["treatment"] = mr["treatment"]
     elif lang == "hi" and disease_name in DISEASE_INFO_HI:
         hi = DISEASE_INFO_HI[disease_name]
         info["disease_name_local"] = hi.get("disease_name", disease_name)
-        info["symptoms"] = hi["symptoms"]
-        info["causes"] = hi["causes"]
-        info["prevention"] = hi["prevention"]
-        info["treatment"] = hi["treatment"]
-        if hi.get("syngenta_products"):
-            info["syngenta_products"] = hi["syngenta_products"]
+        if hi.get("symptoms"): info["symptoms"] = hi["symptoms"]
+        if hi.get("causes"): info["causes"] = hi["causes"]
+        if hi.get("prevention"): info["prevention"] = hi["prevention"]
+        if hi.get("treatment"): info["treatment"] = hi["treatment"]
     else:
         info["disease_name_local"] = disease_name
     
@@ -562,6 +558,9 @@ async def detect_disease(file: UploadFile = File(...), current_user: dict = Depe
                 "syngenta_products": []
             })
         
+        # Get practices for the disease
+        practices = DISEASE_PRACTICES.get(final_disease, {})
+        
         # Save detection result as PENDING (admin must approve before farmer sees it)
         detection_doc = {
             "id": image_id,
@@ -574,10 +573,14 @@ async def detect_disease(file: UploadFile = File(...), current_user: dict = Depe
             "disease": final_disease,
             "severity": final_severity,
             "treatment": disease_info["treatment"],
-            "syngenta_products": disease_info["syngenta_products"],
             "symptoms": disease_info["symptoms"],
             "causes": disease_info["causes"],
             "prevention": disease_info["prevention"],
+            "cultural_practices": practices.get("cultural", []),
+            "mechanical_practices": practices.get("mechanical", []),
+            "biological_practices": practices.get("biological", []),
+            "chemical_practices": practices.get("chemical", []),
+            "spray_timing": practices.get("timing", []),
             "status": "pending",
             "admin_suggestion": "",
             "reviewed_by": "",
@@ -637,18 +640,8 @@ async def get_diseases(lang: str = "en"):
     result = {}
     # Include ALL diseases from practices document
     for name in DISEASE_PRACTICES.keys():
-        # Get base info if available, otherwise create minimal entry
-        if name in DISEASE_INFO:
-            translated = get_translated_disease_info(name, lang)
-        else:
-            translated = {
-                "disease_name_local": name,
-                "symptoms": "",
-                "causes": "",
-                "prevention": "",
-                "treatment": "",
-                "syngenta_products": []
-            }
+        # Always get translated info (works for all diseases now)
+        translated = get_translated_disease_info(name, lang)
         # Add practices data - use translated if available
         if lang == "mr" and name in DISEASE_PRACTICES_MR:
             practices = DISEASE_PRACTICES_MR[name]
@@ -781,10 +774,16 @@ async def review_detection(detection_id: str, review: AdminReview, current_user:
         if disease_info:
             update_data["disease"] = corrected_disease
             update_data["treatment"] = disease_info["treatment"]
-            update_data["syngenta_products"] = disease_info["syngenta_products"]
             update_data["symptoms"] = disease_info["symptoms"]
             update_data["causes"] = disease_info["causes"]
             update_data["prevention"] = disease_info["prevention"]
+            # Update practices too
+            practices = DISEASE_PRACTICES.get(corrected_disease, {})
+            update_data["cultural_practices"] = practices.get("cultural", [])
+            update_data["mechanical_practices"] = practices.get("mechanical", [])
+            update_data["biological_practices"] = practices.get("biological", [])
+            update_data["chemical_practices"] = practices.get("chemical", [])
+            update_data["spray_timing"] = practices.get("timing", [])
         else:
             update_data["disease"] = corrected_disease
     
