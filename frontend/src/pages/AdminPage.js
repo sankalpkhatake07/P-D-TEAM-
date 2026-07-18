@@ -167,20 +167,22 @@ export const AdminPage = () => {
                             </div>
                           </div>
 
-                          {/* Treatment */}
+                          {/* All Practices */}
                           <div className="bg-[#D7E8D6] border border-[#A3C4A5] rounded-lg p-3 mb-3 space-y-2">
                             <p className="text-xs uppercase tracking-[0.2em] font-bold text-[#1A3626]">Practices</p>
                             {item.treatment && <p className="text-sm text-[#57695D]"><Pill className="w-3.5 h-3.5 inline mr-1 text-[#1A3626]" /><span className="font-medium text-[#1A3626]">Treatment:</span> {item.treatment}</p>}
-                            {item.cultural_practices?.length > 0 && (
-                              <div><span className="text-xs font-bold text-[#839E88]"><Sprout className="w-3 h-3 inline mr-1" />Cultural:</span>
-                                <ul className="pl-4 mt-0.5">{item.cultural_practices.slice(0,2).map((p,i) => <li key={i} className="text-xs text-[#57695D] list-disc">{p}</li>)}</ul>
+                            {[
+                              { items: item.cultural_practices, icon: Sprout, label: 'Cultural' },
+                              { items: item.mechanical_practices, icon: Wrench, label: 'Mechanical' },
+                              { items: item.biological_practices, icon: Bug, label: 'Biological' },
+                              { items: item.chemical_practices, icon: FlaskConical, label: 'Chemical' },
+                              { items: item.spray_timing, icon: Clock, label: 'Spray Timing' },
+                            ].filter(s => s.items?.length > 0).map((section, si) => (
+                              <div key={si}>
+                                <span className="text-xs font-bold text-[#839E88]"><section.icon className="w-3 h-3 inline mr-1" />{section.label}:</span>
+                                <ul className="pl-4 mt-0.5">{section.items.map((p,i) => <li key={i} className="text-xs text-[#57695D] list-disc">{p}</li>)}</ul>
                               </div>
-                            )}
-                            {item.chemical_practices?.length > 0 && (
-                              <div><span className="text-xs font-bold text-[#839E88]"><FlaskConical className="w-3 h-3 inline mr-1" />Chemical:</span>
-                                <ul className="pl-4 mt-0.5">{item.chemical_practices.slice(0,2).map((p,i) => <li key={i} className="text-xs text-[#57695D] list-disc">{p}</li>)}</ul>
-                              </div>
-                            )}
+                            ))}
                           </div>
 
                           {reviewingId !== item.id ? (
