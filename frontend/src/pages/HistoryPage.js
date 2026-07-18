@@ -156,16 +156,6 @@ export const HistoryPage = () => {
                               <p className="text-sm text-[#57695D] leading-relaxed">{item.prevention}</p>
                             </div>
                           </div>
-                          {item.syngenta_products && item.syngenta_products.length > 0 && (
-                            <div className="bg-[#D7E8D6] border border-[#A3C4A5] rounded-xl p-4">
-                              <h4 className="text-xs uppercase tracking-[0.2em] font-bold text-[#1A3626] mb-2.5">{t('recommendedProducts')}</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {item.syngenta_products.map((p, i) => (
-                                  <span key={i} className="bg-[#FDFDFB] px-3 py-1.5 rounded-full text-sm font-medium text-[#1A3626] border border-[#1A3626]/20">{p}</span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                           {item.admin_suggestion && (
                             <div className="bg-[#FDFDFB] border-l-4 border-[#1A3626] rounded-r-xl p-4">
                               <div className="flex items-center gap-2 mb-1.5"><MessageSquare className="w-4 h-4 text-[#1A3626]" /><h4 className="text-xs uppercase tracking-[0.2em] font-bold text-[#839E88]">{t('adminSuggestion')}</h4></div>
