@@ -65,7 +65,7 @@ export const RegisterPage = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="text-xs uppercase tracking-[0.2em] text-[#839E88] font-semibold mb-2 block">{t('username')}</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" required
+              <input data-testid="register-username-input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" required
                 className="w-full bg-[#FDFDFB] border border-[#839E88]/40 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#1A3626] focus:border-transparent outline-none transition-all text-[#1A3626] placeholder:text-[#839E88]" />
             </div>
             <div>
