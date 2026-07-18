@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const DISEASE_LIST = [
-  "Brown Rust", "Mosaic", "Red Rot", "Healthy"
+  "Brown Rust", "Mosaic", "Red Rot", "Healthy", "Unrecognized"
 ];
 
 export const AdminPage = () => {

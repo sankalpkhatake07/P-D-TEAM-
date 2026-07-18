@@ -107,6 +107,13 @@ DISEASE_INFO = {
         "prevention": "Continue good agricultural practices, regular monitoring, balanced nutrition",
         "treatment": "No treatment needed",
         "syngenta_products": []
+    },
+    "Unrecognized": {
+        "symptoms": "Could not be identified by our model",
+        "causes": "This disease is not yet supported by our detection model",
+        "prevention": "Consult with agricultural experts for guidance",
+        "treatment": "Admin will review your scan and provide personalized suggestions",
+        "syngenta_products": []
     }
 }
 
@@ -500,8 +507,14 @@ async def detect_disease(file: UploadFile = File(...), current_user: dict = Depe
                 logging.warning(f"Failed to store overlay: {e}")
         
         # Use UNet result directly
-        final_disease = unet_result.get("disease") or "Healthy"
-        final_severity = unet_result.get("severity", "low")
+        # If UNet found no disease regions, mark as "Unrecognized" (not in our model yet)
+        unet_disease = unet_result.get("disease")
+        if unet_disease:
+            final_disease = unet_disease
+            final_severity = unet_result.get("severity", "low")
+        else:
+            final_disease = "Unrecognized"
+            final_severity = "medium"
         
         logging.info(f"FINAL RESULT: {final_disease} (severity: {final_severity})")
         

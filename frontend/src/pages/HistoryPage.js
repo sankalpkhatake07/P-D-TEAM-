@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useTranslation } from 'react-i18next';
-import { History, Search, Clock, CheckCircle2, XCircle, MessageSquare, ChevronDown, Leaf, ShieldCheck, Pill, Bug, ShieldAlert } from 'lucide-react';
+import { History, Search, Clock, CheckCircle2, XCircle, MessageSquare, ChevronDown, Leaf, ShieldCheck, Pill, Bug, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -104,6 +104,11 @@ export const HistoryPage = () => {
                               </h3>
                             ) : status === 'rejected' ? (
                               <h3 className="text-lg font-bold text-[#8F2C1A]">{t('scanRejected')}</h3>
+                            ) : item.disease === 'Unrecognized' ? (
+                              <h3 className="text-lg font-bold text-[#B36B00] flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5" />
+                                {t('unrecognizedDisease')}
+                              </h3>
                             ) : (
                               <h3 className="text-lg font-bold text-[#B36B00]">{t('awaitingReview')}</h3>
                             )}
@@ -121,7 +126,8 @@ export const HistoryPage = () => {
                           </div>
                         </div>
                         {status === 'approved' && <p className="text-sm text-[#57695D] mt-1.5 line-clamp-1"><span className="font-medium text-[#1A3626]">{t('treatment')}:</span> {item.treatment}</p>}
-                        {status === 'pending' && <p className="text-sm text-[#B36B00] mt-1">{t('pendingMsg')}</p>}
+                        {status === 'pending' && item.disease === 'Unrecognized' && <p className="text-sm text-[#B36B00] mt-1">{t('unrecognizedMsg')}</p>}
+                        {status === 'pending' && item.disease !== 'Unrecognized' && <p className="text-sm text-[#B36B00] mt-1">{t('pendingMsg')}</p>}
                         {status === 'rejected' && <p className="text-sm text-[#8F2C1A] mt-1">{t('rejectedMsg')}</p>}
                       </div>
                     </div>

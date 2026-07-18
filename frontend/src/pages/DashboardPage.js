@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Layout } from '../components/Layout';
 import { useTranslation } from 'react-i18next';
-import { Upload, ScanLine, Clock, SendHorizonal, RotateCcw } from 'lucide-react';
+import { Upload, ScanLine, Clock, SendHorizonal, RotateCcw, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
@@ -125,15 +125,27 @@ export const DashboardPage = () => {
                       <span className="absolute top-2 left-2 bg-[#1A3626]/80 text-white text-xs px-2 py-1 rounded-lg font-medium">AI Segmentation Overlay</span>
                     </div>
                   )}
-                  <div className="bg-[#FCE5CD] border border-[#F3C185] rounded-xl p-5">
-                    <div className="flex items-start space-x-3">
-                      <Clock className="w-7 h-7 text-[#B36B00] flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h3 className="text-base font-bold text-[#1A3626]">{t('submittedForReview')}</h3>
-                        <p className="text-sm text-[#57695D] mt-1.5 leading-relaxed">{t('submittedMsg')}</p>
+                  {result.disease === 'Unrecognized' ? (
+                    <div className="bg-[#FCE5CD] border border-[#F3C185] rounded-xl p-5">
+                      <div className="flex items-start space-x-3">
+                        <AlertTriangle className="w-7 h-7 text-[#B36B00] flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="text-base font-bold text-[#B36B00]">{t('unrecognizedDisease')}</h3>
+                          <p className="text-sm text-[#57695D] mt-1.5 leading-relaxed">{t('unrecognizedMsg')}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-[#FCE5CD] border border-[#F3C185] rounded-xl p-5">
+                      <div className="flex items-start space-x-3">
+                        <Clock className="w-7 h-7 text-[#B36B00] flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="text-base font-bold text-[#1A3626]">{t('submittedForReview')}</h3>
+                          <p className="text-sm text-[#57695D] mt-1.5 leading-relaxed">{t('submittedMsg')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2.5 text-[#839E88]">
                     <SendHorizonal className="w-4 h-4" />
                     <span className="text-sm">{t('aiAnalyzed')}</span>

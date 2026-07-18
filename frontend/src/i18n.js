@@ -69,6 +69,8 @@ const resources = {
       adminSuggestion: 'Admin Suggestion',
       adminNote: 'Admin Note',
       scanRejected: 'Scan Rejected',
+      unrecognizedDisease: 'Disease Not Yet Supported',
+      unrecognizedMsg: 'This disease is not yet in our detection model. Admin will review your scan and provide suggestions.',
       
       // Admin
       totalUsers: 'Total Users',
@@ -150,6 +152,8 @@ const resources = {
       adminSuggestion: 'व्यवस्थापक सुझाव',
       adminNote: 'व्यवस्थापक टिप्पणी',
       scanRejected: 'स्कैन अस्वीकृत',
+      unrecognizedDisease: 'रोग अभी तक समर्थित नहीं',
+      unrecognizedMsg: 'यह रोग अभी तक हमारे मॉडल में नहीं है। प्रशासक आपकी स्कैन की समीक्षा करेंगे और सुझाव देंगे।',
       
       // Admin
       totalUsers: 'कुल उपयोगकर्ता',
@@ -231,6 +235,8 @@ const resources = {
       adminSuggestion: 'प्रशासक सूचना',
       adminNote: 'प्रशासक टीप',
       scanRejected: 'स्कॅन नाकारला',
+      unrecognizedDisease: 'रोग अद्याप समर्थित नाही',
+      unrecognizedMsg: 'हा रोग अद्याप आमच्या मॉडेलमध्ये नाही. प्रशासक तुमचा स्कॅन पाहतील आणि सूचना देतील.',
       
       // Admin
       totalUsers: 'एकूण वापरकर्ते',
