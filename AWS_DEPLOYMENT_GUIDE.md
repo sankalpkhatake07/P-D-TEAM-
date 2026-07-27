@@ -1,4 +1,4 @@
-# AWS Deployment Guide - SugarCane AI Disease Detection
+# AWS Deployment Guide - SugarCane AI Disease Detection (Agri)
 
 ## Quick Start (Simplest Way)
 
